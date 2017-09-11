@@ -34,23 +34,6 @@
         <extension module="org.wildfly.extension.undertow"/>
         <!-- ##KEYCLOAK_EXTENSION## -->
     </extensions>
-    
-	<system-properties>
-	
-		<!-- START Kerberos -->
-		<property name="java.security.krb5.conf" value="${env.JBOSS_HOME}/standalone/configuration/krb5.conf"/>
-		<property name="java.security.auth.login.config" value="${env.JBOSS_HOME}/standalone/configuration/jaas-client.conf"/>
-        <!-- This property is required for larger SPNEGO tokens -->
-		<property name="org.apache.coyote.http11.Http11Protocol.MAX_HEADER_SIZE" value="65535"/>
-		
-		<!-- Kerberos Debug Logging
-		<property name="sun.security.spnego.debug" value="true"/>
-		<property name="java.security.krb5.debug" value="true"/>
-		-->
-		<!-- END Kerberos -->
-		    
-	</system-properties>
-    
     <management>
         <security-realms>
             <security-realm name="ManagementRealm">
@@ -124,18 +107,6 @@
             <logger category="sun.rmi">
                 <level name="WARN"/>
             </logger>
-            
-			<!-- START Kerberos -->
-			<!-- 
-			<logger category="org.jboss.security">
-				<level name="DEBUG"/>
-			</logger>
-			<logger category="org.jboss.security.negotiation">
-				<level name="TRACE"/>
-			</logger>
-			-->
-		    <!-- END Kerberos -->
-            
             <root-logger>
                 <level name="INFO"/>
                 <handlers>
@@ -150,8 +121,8 @@
                 </custom-formatter>
             </formatter>
             <formatter name="COLOR-PATTERN">
-                <pattern-formatter pattern="%K{level}%d{dd-MM-yyyy HH:mm:ss,SSS} %-5p [%c] (%t) %s%e%n"/>
-           </formatter>
+                <pattern-formatter pattern="%K{level}%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%e%n"/>
+            </formatter>
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:batch-jberet:1.0">
                  <default-job-repository name="in-memory"/>
@@ -168,23 +139,16 @@
         <subsystem xmlns="urn:jboss:domain:bean-validation:1.0"/>
         <subsystem xmlns="urn:jboss:domain:datasources:4.0">
             <datasources>
-                <!-- TODO: Change the datasource JNDI name to match the name that your application code expects. -->
-                <datasource jndi-name="java:jboss/datasources/APP_DS" pool-name="APP_DS" enabled="true" use-java-context="true" jta="false" use-ccm="false">
-                	<connection-url>jdbc:oracle:thin:@${env.DB_HOST:localhost}:${env.DB_PORT:1521}/${env.DB_DATABASE:test}</connection-url>
-					<!--NOTE: the following native encryption properties are valid for Oracle 11G only. For other versions of Oracle and other databases please check relevant documentation -->
-					<!-- START Oracle native encryption -->
-					<connection-property name="oracle.net.encryption_client" type="java.lang.String">requested</connection-property>
-					<connection-property name="oracle.net.crypto_checksum_client" type="java.lang.String">requested</connection-property>
-					<!-- END Oracle native encryption -->
-                    <driver>OracleJDBC</driver>
-                    <security>
-                        <user-name>${env.DB_USERNAME:user}</user-name>
-                        <password>${env.DB_PASSWORD:pass}</password>
-                    </security>
-                </datasource>               
+                <datasource jndi-name="java:jboss/datasources/ExampleDS" pool-name="ExampleDS" enabled="true" use-java-context="true"> <connection-url>jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE</connection-url> <driver>h2</driver> <security> <user-name>sa</user-name> <password>sa</password> </security> </datasource>
                 <drivers>
-                    <driver name="OracleJDBC" module="com.oracle.jdbc">
-                        <xa-datasource-class>oracle.jdbc.xa.client.OracleXADataSource</xa-datasource-class>
+                    <driver name="h2" module="com.h2database.h2">
+                        <xa-datasource-class>org.h2.jdbcx.JdbcDataSource</xa-datasource-class>
+                    </driver>
+                    <driver name="mysql" module="com.mysql">
+                        <xa-datasource-class>com.mysql.jdbc.jdbc2.optional.MysqlXADataSource</xa-datasource-class>
+                    </driver>
+                    <driver name="postgresql" module="org.postgresql">
+                        <xa-datasource-class>org.postgresql.xa.PGXADataSource</xa-datasource-class>
                     </driver>
                 </drivers>
             </datasources>
@@ -208,10 +172,8 @@
                     <managed-scheduled-executor-service name="default" jndi-name="java:jboss/ee/concurrency/scheduler/default" context-service="default" hung-task-threshold="60000" keepalive-time="3000"/>
                 </managed-scheduled-executor-services>
             </concurrent>
-            
-            <!-- TODO: Change the datasource JNDI name to match the name that your application code expects. -->
             <default-bindings context-service="java:jboss/ee/concurrency/context/default"
-                              datasource="java:jboss/datasources/APP_DS"
+                              datasource="java:jboss/datasources/ExampleDS"
                               jms-connection-factory="java:jboss/DefaultJMSConnectionFactory"
                               managed-executor-service="java:jboss/ee/concurrency/executor/default"
                               managed-scheduled-executor-service="java:jboss/ee/concurrency/scheduler/default"
@@ -341,11 +303,11 @@
                     <protocol type="FD_SOCK" socket-binding="jgroups-udp-fd"/>
                     <protocol type="FD_ALL"/>
                     <protocol type="VERIFY_SUSPECT"/>
+
                     <protocol type="pbcast.NAKACK2"/>
                     <protocol type="UNICAST3"/>
                     <protocol type="pbcast.STABLE"/>
                     <!--WARNING: No password defined for JGroups cluster. AUTH protocol has been disabled. Please define JGROUPS_CLUSTER_PASSWORD. -->
-
                     <protocol type="pbcast.GMS"/>
                     <protocol type="UFC"/>
                     <protocol type="MFC"/>
@@ -358,11 +320,11 @@
                     <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd"/>
                     <protocol type="FD"/>
                     <protocol type="VERIFY_SUSPECT"/>
+
                     <protocol type="pbcast.NAKACK2"/>
                     <protocol type="UNICAST3"/>
                     <protocol type="pbcast.STABLE"/>
                     <!--WARNING: No password defined for JGroups cluster. AUTH protocol has been disabled. Please define JGROUPS_CLUSTER_PASSWORD. -->
-
                     <protocol type="pbcast.GMS"/>
                     <protocol type="MFC"/>
                     <protocol type="FRAG2"/>
@@ -387,15 +349,15 @@
         </subsystem>
         <subsystem xmlns="urn:jboss:domain:messaging-activemq:1.0">
                 <server name="default">
-<!--
+        <!--
         <cluster password="${jboss.messaging.cluster.password:CHANGE ME!!}"/>
--->
+        -->
         <security-setting name="#">
             <role name="guest" send="true" consume="true" create-non-durable-queue="true" delete-non-durable-queue="true"/>
         </security-setting>
-<!--
+        <!--
         <address-setting name="#" dead-letter-address="jms.queue.DLQ" expiry-address="jms.queue.ExpiryQueue" max-size-bytes="10485760" page-size-bytes="2097152" message-counter-history-day-limit="10" redistribution-delay="1000"/>
--->
+        -->
         <address-setting name="#" dead-letter-address="jms.queue.DLQ" expiry-address="jms.queue.ExpiryQueue" max-size-bytes="10485760" page-size-bytes="2097152" message-counter-history-day-limit="10"/>
         <http-connector name="http-connector" socket-binding="http" endpoint="http-acceptor"/>
         <http-connector name="http-connector-throughput" socket-binding="http" endpoint="http-acceptor-throughput">
@@ -408,18 +370,18 @@
             <param name="direct-deliver" value="false"/>
         </http-acceptor>
         <in-vm-acceptor name="in-vm" server-id="0"/>
-<!--
+        <!--
         <broadcast-group name="bg-group1" connectors="http-connector" jgroups-stack="tcp" jgroups-channel="activemq-cluster"/>
         <discovery-group name="dg-group1" jgroups-stack="tcp" jgroups-channel="activemq-cluster"/>
         <cluster-connection name="my-cluster" address="jms" connector-name="http-connector" discovery-group="dg-group1"/>
--->
+        -->
         <jms-queue name="ExpiryQueue" entries="java:/jms/queue/ExpiryQueue"/>
         <jms-queue name="DLQ" entries="java:/jms/queue/DLQ"/>
 
         <connection-factory name="InVmConnectionFactory" connectors="in-vm" entries="java:/ConnectionFactory"/>
-<!--
+        <!--
         <connection-factory name="RemoteConnectionFactory" ha="true" block-on-acknowledge="true" reconnect-attempts="-1" connectors="http-connector" entries="java:jboss/exported/jms/RemoteConnectionFactory"/>
--->
+    -->
         <connection-factory name="RemoteConnectionFactory" connectors="http-connector" entries="java:jboss/exported/jms/RemoteConnectionFactory"/>
         <pooled-connection-factory name="activemq-ra" transaction="xa" connectors="in-vm" entries="java:/JmsXA java:jboss/DefaultJMSConnectionFactory"/>
     </server>
@@ -475,43 +437,7 @@
                         <policy-module code="Delegating" flag="required"/>
                     </authorization>
                 </security-domain>
-                
-                <!-- START Kerberos -->
-				<security-domain name="SPNEGO">
-                    <authentication>
-                        <login-module code="SPNEGO" flag="required">
-                            <module-option name="password-stacking" value="useFirstPass"/>
-                            <module-option name="serverSecurityDomain" value="host"/>
-                            
-                            <!-- Kerberos Debug Logging
-                            <module-option name="debug" value="true"/>
-                            -->
-                            
-                        </login-module>
-                        <login-module code="Database" flag="required">
-                            <module-option name="password-stacking" value="useFirstPass"/>
-                            <!-- TODO: Change the datasource JNDI name to match the name that your application code expects. -->
-                            <module-option name="dsJndiName" value="java:jboss/datasources/APP_DS"/>
-                            <!-- TODO: Change the role query as required for you application. -->
-                            <module-option name="rolesQuery" value="select 'ROLE_'||groups.GROUP_NAME as role,'Roles' from CSOWNERBS1.SCUSR_USERS users, CSOWNERBS1.SCUSG_USER_GROUPS userGroups, CSOWNERBS1.SCGRP_GROUPS groups, CSOWNERBS1.SCUSP_USER_PROFILES userProfiles where users.SCUSR_PK = userGroups.SCUSG_SCUSR_FK and userGroups.SCUSG_SCGRP_FK = groups.SCGRP_PK and userProfiles.ID_SCUSR_FK = users.SCUSR_PK and (userGroups.VALID_TO IS NULL) and (userProfiles.VALID_TO IS NULL or userProfiles.VALID_TO >= SYSDATE) and lower(users.USERNAME||'@BP1.AD.BP.COM')=lower(?)"/>
-                        </login-module>
-                    </authentication>
-                </security-domain>	
-				<security-domain name="host">
-                    <authentication>
-                        <login-module code="org.jboss.security.negotiation.KerberosLoginModule" flag="required">
-                            <module-option name="useKeyTab" value="true"/>
-                            <module-option name="keyTab" value="/etc/config/kerb.keytab"/>
-                            <module-option name="storeKey" value="true"/>
-                            <module-option name="doNotPrompt" value="true"/>
-                            <module-option name="debug" value="true"/>
-                            <module-option name="principal" value="${env.PRINCIPAL}"/>
-                        </login-module>
-                    </authentication>
-                </security-domain>
-                <!-- END Kerberos -->
-				
-				<!-- ##KEYCLOAK_SECURITY_DOMAIN## -->
+                <!-- ##KEYCLOAK_SECURITY_DOMAIN## -->
                 <!-- no additional security domains configured -->
             </security-domains>
         </subsystem>
